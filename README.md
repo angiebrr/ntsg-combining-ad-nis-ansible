@@ -1,12 +1,40 @@
 # Combining NIS and AD with Ansible
 
+> [!WARNING]
+> Archived and no longer maintained; kept for reference. Written in 2016 for CentOS 6 and 7, which are both end-of-life.
+
+- [Combining NIS and AD with Ansible](#combining-nis-and-ad-with-ansible)
+  - [Overview](#overview)
+    - [What this playbook does](#what-this-playbook-does)
+  - [Using it](#using-it)
+    - [Variable files](#variable-files)
+      - [all.yml](#allyml)
+      - [vault.yml](#vaultyml)
+      - [hosts](#hosts)
+    - [Provision the machine(s) in hosts](#provision-the-machines-in-hosts)
+    - [Running the playbook](#running-the-playbook)
+
 ## Overview
 
-This playbook combines joining a machine to an AD domain and an NIS server. The hope is to be able to use NIS accounts but authenticate with Active Directory since the servers that we are currently using are littered with NIS UIDs and GIDs but we want to use AD to authenticate.
+An Ansible playbook that joins CentOS 6 and 7 servers to Active Directory for authentication while keeping NIS for user and group identities.
 
-So far, only `CentOS 6` and `CentOS 7` machines are supported in this playbook.
+I wrote this in 2016 as the Linux sysadmin for NTSG, a research group at the University of Montana. Our servers were full of NIS UIDs and GIDs we couldn't easily migrate, but we wanted people to log in with their AD password so researchers only had one password to remember. Setting that up by hand took a while and was easy to get wrong if you missed a step, so I automated it.
 
-## Variable Files
+**Tech:** Ansible, SSSD, Kerberos, adcli, NIS (ypbind), chrony, CentOS 6/7
+
+### What this playbook does
+
+- Makes each host an NIS client
+- Joins it to the AD domain with `adcli`
+- Configures SSSD to take identity from NIS and authentication from AD
+- Creates home directories on first login with oddjob-mkhomedir
+- Backs up every file it changes to `/etc/backups`
+
+A later CentOS 7 version that uses `realmd` is in [configuring-ad-in-ansible](https://github.com/angiebrr/configuring-ad-in-ansible).
+
+## Using it
+
+### Variable files
 
 You will need to do a little bit of setup before using this playbook. The first thing to do is to make sure that you have the following variable and host files filled out:
 
@@ -14,7 +42,7 @@ You will need to do a little bit of setup before using this playbook. The first 
 - `group_vars/vault.yml`
 - `hosts`
 
-### all.yml
+#### all.yml
 
 This has the variables that all hosts will use for the ad, nis, and join roles. There is an example yml file that you template off of. This file also has descriptions of each variable so you know exactly what you are setting.
 
@@ -48,7 +76,7 @@ nis_servers:
 
 ```
 
-### vault.yml
+#### vault.yml
 
 You will also need to create a vault.yml file with the following variables inside:
 
@@ -65,17 +93,17 @@ It is recommended that you create this file using `ansible-vault` like so:
 $ ansible-vault create group_vars/vault.yml
 ```
 
-For more information on using `ansible-vault`, please visit this the ansible documentation: [Ansible Vault](http://docs.ansible.com/ansible/playbooks_vault.html "Ansible's Documentation for Vault") 
+For more information on using `ansible-vault`, see the Ansible documentation: [Ansible Vault](https://docs.ansible.com/ansible/latest/vault_guide/index.html)
 
-### hosts
+#### hosts
 
 This, as usual, contains the host information of the machines that will run this playbook (i.e. the inventory)
 
-## Provision the machine(s) in hosts
+### Provision the machine(s) in hosts
 
 Before running this playbook, you have to provision the machines in your hosts file in Active Directory in Windows, as I haven't found a way to automate this. All you need to do is add a computer under the AD domain and make it the same name as the hostname of the linux machine.
 
-## Running the playbook
+### Running the playbook
 
 A typical run of the playbook will look something like this:
 
@@ -86,7 +114,7 @@ $ ansible-playbook -i hosts site.yml --ask-vault-pass
 The `--ask-vault-pass` parameter will ask for the password to your vault-created file with the variables `vault_ad_user` and `vault_ad_pass`.
 
 There are a couple of things to keep in mind when running this playbook: 
-- Due to the necessity of using authconfig and adcli (which are can be only called from the command module), running the playbook in its entirety will always return a "changed" of 3. Later versions of this playbook will strive to change that behavior.
+- Due to the necessity of using authconfig and adcli (which can only be called from the command module), running the playbook in its entirety will always return a "changed" of 3.
 - Every changed file is backed up in place, so do not despair if something goes awry! The backups are, by default, in `/etc/backups`
 
 Here is a list of files that *could be* changed/created by the playbook:
@@ -100,5 +128,4 @@ Here is a list of files that *could be* changed/created by the playbook:
 
 The only files that will be completely 100% clobbered (as opposed to just changing a few lines) are:
 - /etc/krb5.conf
-- etc/sssd/sssd.conf
-
+- /etc/sssd/sssd.conf
