@@ -30,7 +30,7 @@ I wrote this in 2016 as the Linux sysadmin for NTSG, a research group at the Uni
 - Creates home directories on first login with oddjob-mkhomedir
 - Backs up every file it changes to `/etc/backups`
 
-A later CentOS 7 version that uses `realmd` is in [configuring-ad-in-ansible](https://github.com/angiebrr/configuring-ad-in-ansible).
+A later CentOS 7 version that uses `realmd` is in [ntsg-configuring-ad-in-ansible](https://github.com/angiebrr/ntsg-configuring-ad-in-ansible).
 
 ## Using it
 
